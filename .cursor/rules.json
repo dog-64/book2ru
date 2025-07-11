@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "mcp": {
+    "command": "./mcp-psql.rb",
+    "protocol": "json-rpc",
+    "version": "2.0"
+  },
+  "editor": {
+    "formatOnSave": true,
+    "tabSize": 2,
+    "insertSpaces": true
+  },
+  "plugins": {
+    "enabled": true,
+    "directory": "plugins"
+  }
+} 

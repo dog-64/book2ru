@@ -1,0 +1,32 @@
+# Пример конфигурации Cursor для MCP PSQL
+
+Этот файл содержит пример конфигурации для интеграции MCP PSQL с Cursor IDE.
+
+## Базовая конфигурация
+
+```json
+{
+  "version": 1,
+  "mcp": {
+    "command": "/usr/local/bin/mcp-psql.sh",
+    "protocol": "json-rpc",
+    "version": "2.0"
+  },
+  "editor": {
+    "formatOnSave": true,
+    "tabSize": 2,
+    "insertSpaces": true
+  },
+  "plugins": {
+    "enabled": true,
+    "directory": "plugins"
+  }
+}
+```
+
+## Пояснения
+
+- При разработке самого MCP PSQL используется относительный путь: `"./mcp-psql.sh"`
+- В обычных проектах нужно указывать полный путь: `"/usr/local/bin/mcp-psql.sh"`
+- Параметры редактора настраивают автоформатирование и отступы
+- Секция plugins включает поддержку плагинов из указанной директории 
