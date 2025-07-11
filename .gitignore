@@ -1,0 +1,9 @@
+json/
+logs/
+.env
+tests/
+vendor/
+.connections.json
+.env
+spec/examples.txt
+.idea/
