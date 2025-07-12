@@ -7,3 +7,5 @@ vendor/
 .env
 spec/examples.txt
 .idea/
+coverage/
+_src/
