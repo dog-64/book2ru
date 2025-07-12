@@ -18,7 +18,8 @@ class Book2ru
       prompt: 'Translate this text to Russian. Only return the translated text, nothing else:',
       metadata_footer: true,
       rate_limits: nil,
-      retry_attempts: 3
+      retry_attempts: 3,
+      start_batch: 1
     }
 
     load_config

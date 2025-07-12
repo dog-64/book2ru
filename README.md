@@ -4,6 +4,33 @@
 OpenRouter API. Available in both Go and Ruby implementations, it processes text through a standard STDIN/STDOUT
 pipeline, making it a versatile component in any text processing workflow.
 
+## Version Comparison 📊
+
+| Feature | Go Version | Ruby Version |
+|---------|------------|--------------|
+| **Performance** | ⚡ Faster | 🐢 Slower |
+| **Deployment** | 📦 Single binary | 💎 Requires Ruby + gems |
+| **Resume after failures** | ✅ `--start-batch` | ❌ Not supported |
+| **Rate limiting** | ❌ Not supported | ✅ `--rate-limits` |
+| **Configuration file** | `.book2ru-go.yml` | `.book2ru.yml` |
+| **Retry attempts** | ✅ 3 (configurable) | ✅ 3 (configurable) |
+| **All error types retried** | ✅ Yes | ✅ Yes |
+| **Ecosystem** | 🔧 Minimal | 🌟 Rich Ruby gems |
+
+### Which Version to Choose? 🤔
+
+- **Choose Go version** if you need:
+  - Maximum performance and speed
+  - Single binary deployment  
+  - Resume after failures (`--start-batch`)
+  - Minimal dependencies
+
+- **Choose Ruby version** if you need:
+  - Rate limiting features
+  - Ruby ecosystem integration
+  - More readable/customizable code
+  - Don't mind Ruby dependencies
+
 ## Go Version (Prototype) 🚀
 
 `book2ru-go` is a Go implementation prototype that provides the same functionality as the Ruby version with improved
@@ -55,6 +82,9 @@ performance and easier deployment.
 # Using a different model
 ./book2ru-go --model "mistralai/mistral-large-latest" < input.txt > output.txt
 
+# Resume translation from batch 10 (after a failure)
+./book2ru-go --start-batch 10 < my_book.txt > my_book_ru.txt
+
 # Show version
 ./book2ru-go --version
 
@@ -85,6 +115,22 @@ go test -run TestCreateBatchesFromContent
 | `--version`          |       | Display version and model information.    |
 | `--model <MODEL>`    | `-m`  | Specify the LLM model to use.             |
 | `--openrouter_key <KEY>` | `-o`  | Provide the OpenRouter API key directly.  |
+| `--start-batch <N>`  |       | Resume translation from batch N (useful after failures). |
+
+### Go Version Configuration File Options
+
+The `.book2ru-go.yml` file supports these options:
+
+```yaml
+# Model configuration
+model: "google/gemini-flash-1.5"                    # LLM model to use
+prompt: "Translate this text to Russian..."         # Translation prompt
+
+# Processing options  
+start_batch: 1                                      # Starting batch number
+retry_attempts: 3                                   # Number of retry attempts
+metadata_footer: true                               # Show progress information
+```
 
 ---
 
@@ -131,18 +177,24 @@ The original Ruby implementation provides the same functionality with Ruby's exp
 
 The tool reads from STDIN and writes the translated output to STDOUT.
 
-#### Basic Translation
-
 ```bash
+# Basic translation
 ./book2ru.rb < my_book.txt > my_book_ru.txt
-```
 
-#### Using a Different Model
-
-You can specify a different model via the command line:
-
-```bash
+# Using a different model
 ./book2ru.rb --model "mistralai/mistral-large-latest" < input.txt > output.txt
+
+# Set rate limits (requests per minute)
+./book2ru.rb --rate-limits 10 < input.txt > output.txt
+
+# Provide API key directly
+./book2ru.rb --openrouter_key "sk-or-v1-..." < input.txt > output.txt
+
+# Show version
+./book2ru.rb --version
+
+# Show help
+./book2ru.rb --help
 ```
 
 ### Testing Ruby Version 🧪
@@ -167,19 +219,46 @@ To ensure the application is working correctly, you can run the test suite:
 | `--version`          |       | Display version and model information.    |
 | `--model <MODEL>`    | `-m`  | Specify the LLM model to use.             |
 | `--openrouter_key <KEY>` | `-o`  | Provide the OpenRouter API key directly.  |
+| `--rate-limits <RPM>` | `-r`  | Set rate limits (requests per minute).    |
+
+### Ruby Version Configuration File Options
+
+The `.book2ru.yml` file supports these options:
+
+```yaml
+# Model configuration
+model: "google/gemini-flash-1.5"                    # LLM model to use
+prompt: "Translate this text to Russian..."         # Translation prompt
+
+# Processing options
+retry_attempts: 3                                   # Number of retry attempts
+metadata_footer: true                               # Show progress information
+rate_limits: null                                   # Rate limits (requests per minute)
+```
+
+**Note**: Ruby version does not support `--start-batch` option. Use the Go version for resuming after failures.
 
 ---
 
 ## Key Features ✨
 
+### Common Features (Both Versions)
 - **Large File Processing**: Handles large text files (e.g., books) with ease using a stream-based approach.
 - **Intelligent Batching**: Automatically splits input text into 10KB chunks to work efficiently with API limits.
-- **Robust Error Handling**: Features an automatic retry mechanism with exponential backoff for network and API errors.
-- **Flexible Configuration**: Configure API keys, models, and prompts via a `.env` file, configuration files, or
-  command-line arguments.
-- **Metadata Output**: Outputs progress and debugging information to STDERR, keeping STDOUT clean for the translated
-  text.
-- **Cross-Platform**: Available in both Go (fast, single binary) and Ruby (expressive, ecosystem-rich) implementations.
+- **Robust Error Handling**: Features an automatic retry mechanism with exponential backoff for network and API errors (3 attempts by default).
+- **Flexible Configuration**: Configure API keys, models, and prompts via a `.env` file, configuration files, or command-line arguments.
+- **Metadata Output**: Outputs progress and debugging information to STDERR, keeping STDOUT clean for the translated text.
+
+### Go Version Exclusive Features
+- **Resume After Failures**: Can resume translation from a specific batch number after interruptions using `--start-batch` option.
+- **Helpful Error Messages**: When translation fails, shows exact command to resume from the failed batch.
+- **Single Binary**: Compiles to a single executable file for easy deployment.
+- **Better Performance**: Generally faster execution and lower memory usage.
+
+### Ruby Version Exclusive Features  
+- **Rate Limiting**: Built-in rate limiting support with `--rate-limits` option.
+- **Ruby Ecosystem**: Access to the rich Ruby gem ecosystem for extensions.
+- **Expressive Syntax**: More readable and maintainable code for customization.
 
 ## Changing the Target Language 🌐
 
@@ -195,6 +274,65 @@ translation prompt.
    ```
 
 The model will now follow the new instruction for translation.
+
+## Error Handling and Recovery 🔄
+
+### Automatic Retry (Both Versions)
+
+Both Go and Ruby versions automatically retry failed requests up to 3 times with exponential backoff:
+- 1st retry: 2 seconds delay
+- 2nd retry: 4 seconds delay  
+- 3rd retry: 8 seconds delay
+
+All types of errors are retried, including network timeouts, API errors, and JSON parsing failures.
+
+### Resume After Failures (Go Version Only)
+
+If translation fails after all retries, you can resume from where it left off using the `--start-batch` option:
+
+#### Command Line Option
+```bash
+./book2ru-go --start-batch 13 < input.txt >> output.txt
+```
+
+#### Configuration File Option
+```yaml
+# .book2ru-go.yml
+start_batch: 13
+```
+
+#### Step-by-Step Recovery Process
+
+1. **Note the batch number** from the error message (the tool will tell you exactly what to do):
+   ```
+   [ERROR] translating batch 13: decoding API response: read tcp ...
+   
+   To resume from this batch, use: --start-batch 13
+   ```
+
+2. **Resume from that batch using command line**:
+   ```bash
+   ./book2ru-go --start-batch 13 < input.txt >> output.txt
+   ```
+
+   **Important**: Use `>>` (append) instead of `>` (overwrite) to continue adding to your existing output file.
+
+3. **Or set it in configuration file and run normally**:
+   ```bash
+   echo "start_batch: 13" >> .book2ru-go.yml
+   ./book2ru-go < input.txt >> output.txt
+   ```
+
+4. **For large files**, you can also save progress and resume later:
+   ```bash
+   # First run (processes batches 1-12, then fails at 13)
+   ./book2ru-go < large_book.txt > partial_translation.txt
+   
+   # Resume from batch 13
+   ./book2ru-go --start-batch 13 < large_book.txt >> partial_translation.txt
+   ```
+
+**Note**: The Ruby version does not support resuming from a specific batch. If you need this functionality, use the Go version.
 
 ## How It Works
 

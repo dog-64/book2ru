@@ -34,6 +34,7 @@ type Config struct {
 	Prompt         string `yaml:"prompt"`
 	MetadataFooter bool   `yaml:"metadata_footer"`
 	RetryAttempts  int    `yaml:"retry_attempts"`
+	StartBatch     int    `yaml:"start_batch"`
 	APIKey         string
 }
 
@@ -103,6 +104,7 @@ func loadConfig() (*Config, error) {
 		Prompt:         "Translate this text to Russian. Only return the translated text, nothing else:",
 		MetadataFooter: true,
 		RetryAttempts:  3,
+		StartBatch:     1,
 	}
 
 	// Load from .book2ru-go.yml if it exists
@@ -124,6 +126,7 @@ func loadConfig() (*Config, error) {
 	flag.StringVar(&cfg.Model, "m", cfg.Model, "Specify LLM model (alias)")
 	flag.StringVar(&cfg.APIKey, "openrouter_key", "", "OpenRouter API key")
 	flag.StringVar(&cfg.APIKey, "o", "", "OpenRouter API key (alias)")
+	flag.IntVar(&cfg.StartBatch, "start-batch", cfg.StartBatch, "Start translation from specific batch number")
 
 	flag.Parse()
 
@@ -145,6 +148,7 @@ func printHelp(w io.Writer) {
 	fmt.Fprintln(w, "Examples:")
 	fmt.Fprintln(w, "  book2ru-go < input.txt > output-ru.txt")
 	fmt.Fprintln(w, "  book2ru-go --model claude-3-haiku < input.txt > output.txt")
+	fmt.Fprintln(w, "  book2ru-go --start-batch 10 < input.txt > output.txt  # Resume from batch 10")
 }
 
 func runTranslate(stdin io.Reader, stdout io.Writer, logger *log.Logger, cfg *Config) error {
@@ -164,16 +168,28 @@ func runTranslate(stdin io.Reader, stdout io.Writer, logger *log.Logger, cfg *Co
 	batches := createBatchesFromContent(string(content))
 	if cfg.MetadataFooter {
 		logger.Printf("# Created %d batches from %d bytes", len(batches), len(content))
+		if cfg.StartBatch > 1 {
+			logger.Printf("# Starting from batch %d", cfg.StartBatch)
+		}
 	}
 
-	for i, batch := range batches {
+	// Validate start batch
+	if cfg.StartBatch < 1 || cfg.StartBatch > len(batches) {
+		return fmt.Errorf("invalid start batch %d, must be between 1 and %d", cfg.StartBatch, len(batches))
+	}
+
+	// Process batches starting from specified batch
+	for i := cfg.StartBatch - 1; i < len(batches); i++ {
+		batch := batches[i]
 		if cfg.MetadataFooter {
 			logger.Printf("# Processing batch %d/%d (%d bytes, %d lines)", i+1, len(batches), batch.Size, batch.Lines)
 		}
+		
 		translated, err := translateTextBatch(batch.Content, cfg, logger)
 		if err != nil {
-			return fmt.Errorf("translating batch %d: %w", i+1, err)
+			return fmt.Errorf("translating batch %d: %w\n\nTo resume from this batch, use: --start-batch %d", i+1, err, i+1)
 		}
+		
 		if _, err := fmt.Fprint(stdout, translated); err != nil {
 			return fmt.Errorf("writing to stdout: %w", err)
 		}
@@ -242,10 +258,11 @@ func createBatchesFromContent(content string) []Batch {
 
 func translateTextBatch(text string, cfg *Config, logger *log.Logger) (string, error) {
 	var lastErr error
+	
 	for attempt := 0; attempt < cfg.RetryAttempts; attempt++ {
 		if attempt > 0 {
-			time.Sleep(time.Duration(1<<attempt) * time.Second) // Exponential backoff
 			logger.Printf("# Retry attempt %d failed: %v", attempt, lastErr)
+			time.Sleep(time.Duration(1<<attempt) * time.Second) // Exponential backoff
 		}
 
 		apiReq := APIRequest{
@@ -259,12 +276,14 @@ func translateTextBatch(text string, cfg *Config, logger *log.Logger) (string, e
 
 		reqBody, err := json.Marshal(apiReq)
 		if err != nil {
-			return "", fmt.Errorf("marshalling request body: %w", err)
+			lastErr = fmt.Errorf("marshalling request body: %w", err)
+			continue
 		}
 
 		req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(reqBody))
 		if err != nil {
-			return "", fmt.Errorf("creating http request: %w", err)
+			lastErr = fmt.Errorf("creating http request: %w", err)
+			continue
 		}
 
 		req.Header.Set("Authorization", "Bearer "+cfg.APIKey)
@@ -289,23 +308,25 @@ func translateTextBatch(text string, cfg *Config, logger *log.Logger) (string, e
 
 		var apiResp APIResponse
 		if err := json.NewDecoder(resp.Body).Decode(&apiResp); err != nil {
-			return "", fmt.Errorf("decoding API response: %w", err)
+			lastErr = fmt.Errorf("decoding API response: %w", err)
+			continue // Теперь JSON ошибки тоже ретраятся
 		}
 
-		if len(apiResp.Choices) > 0 {
-			content := apiResp.Choices[0].Message.Content
-			if cfg.MetadataFooter {
-				// Truncate for logging
-				logContent := content
-				if len(logContent) > 100 {
-					logContent = logContent[:100] + "..."
-				}
-				logger.Printf("# API Response: %s", logContent)
+		if len(apiResp.Choices) == 0 {
+			lastErr = fmt.Errorf("no choices returned from API")
+			continue
+		}
+
+		content := apiResp.Choices[0].Message.Content
+		if cfg.MetadataFooter {
+			// Truncate for logging
+			logContent := content
+			if len(logContent) > 100 {
+				logContent = logContent[:100] + "..."
 			}
-			return content, nil
+			logger.Printf("# API Response: %s", logContent)
 		}
-
-		lastErr = fmt.Errorf("no choices returned from API")
+		return content, nil
 	}
 
 	return "", fmt.Errorf("failed after %d attempts: %w", cfg.RetryAttempts, lastErr)
