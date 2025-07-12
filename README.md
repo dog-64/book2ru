@@ -161,12 +161,12 @@ To ensure the application is working correctly, you can run the test suite:
 
 ### Ruby Version Command-Line Options
 
-| Option               |  Alias | Description                                    |
-| -------------------- | ------------------------------------------------------- |
-| `--help`             |  `-h`  | Show the help      message.                    |
-| `--version`          |  | Display versio           n and model information.    |
-| `--model <MODEL>`       | `-m`  | Specify the LL   M model to use.             |
-| `--openrouter_key <KEY> ` | `-o`  | Provide the Op enRouter API key directly.  |
+| Option               | Alias | Description                               |
+| -------------------- | ----- | ----------------------------------------- |
+| `--help`             | `-h`  | Show the help message.                    |
+| `--version`          |       | Display version and model information.    |
+| `--model <MODEL>`    | `-m`  | Specify the LLM model to use.             |
+| `--openrouter_key <KEY>` | `-o`  | Provide the OpenRouter API key directly.  |
 
 ---
 
