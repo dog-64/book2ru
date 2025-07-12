@@ -68,6 +68,34 @@ You can specify a different model via the command line:
 ./book2ru.rb --model "mistralai/mistral-large-latest" < input.txt > output.txt
 ```
 
+## Running Tests 🧪
+
+To ensure the application is working correctly, you can run the test suite:
+
+1.  Make sure all development dependencies are installed:
+    ```bash
+    bundle install
+    ```
+
+2.  Run the RSpec tests:
+    ```bash
+    bundle exec rspec
+    ```
+
+## Changing the Target Language 🌐
+
+By default, the tool is configured to translate to Russian. You can change the target language by modifying the translation prompt.
+
+1.  Create or open the `.book2ru.yml` file in the project root.
+2.  Set the `prompt` key with instructions for the new target language. For example, to translate to Spanish:
+
+    ```yaml
+    # .book2ru.yml
+    prompt: "Translate this text to Spanish. Only return the translated text, nothing else:"
+    ```
+
+The model will now follow the new instruction for translation.
+
 ### Command-Line Options
 
 | Option               | Alias | Description                               |
