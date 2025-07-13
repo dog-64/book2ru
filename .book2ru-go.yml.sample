@@ -1,29 +1,29 @@
-# Конфигурация book2ru-go (Go версия)
-# Скопируйте этот файл как .book2ru-go.yml и настройте под свои нужды
+# Configuration for book2ru-go (Go version)
+# Copy this file as .book2ru-go.yml and customize for your needs
 
-# Модель для перевода
+# Translation model
 model: "google/gemini-flash-1.5"
 
-# Промпт для перевода
+# Translation prompt
 prompt: "Translate this text to Russian. Only return the translated text, nothing else:"
 
-# Размер батча в байтах (по умолчанию 10KB)
+# Batch size in bytes (default 10KB)
 batch_size: 10000
 
-# Количество попыток при ошибках
+# Number of retry attempts on errors
 retry_attempts: 3
 
-# Начальный батч (для восстановления после ошибок)
+# Starting batch (for recovery after errors)
 start_batch: 1
 
-# Показывать метаданные в STDERR
+# Show metadata in STDERR
 metadata_footer: true
 
-# Альтернативные модели для экспериментов:
+# Alternative models for experiments:
 # model: "anthropic/claude-3-5-sonnet-20240620"
 # model: "mistralai/mistral-large-latest"
 # model: "openai/gpt-4o"
 
-# Альтернативные промпты:
+# Alternative prompts:
 # prompt: "Translate the following English text to Russian. Preserve all formatting and line breaks:"
 # prompt: "Переведи этот текст на русский язык, сохраняя форматирование:" 
