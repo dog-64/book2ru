@@ -69,8 +69,8 @@ RSpec.describe Book2ru do
     it 'translates text from stdin' do
       stdout, stderr = run_app([], input_text)
       expect(stdout).to eq(translated_text)
-      expect(stderr).to include("starting translation")
-      expect(stderr).to include("Translated by book2ru")
+      expect(stderr).to include('starting translation')
+      expect(stderr).to include('Translated by book2ru')
     end
 
     context 'when API key is missing' do
@@ -130,4 +130,4 @@ RSpec.describe Book2ru do
       expect(batches[1][:content]).to eq("#{long_line}\n")
     end
   end
-end 
+end

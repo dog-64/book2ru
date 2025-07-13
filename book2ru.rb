@@ -10,7 +10,6 @@ require 'dotenv'
 
 class Book2ru
   VERSION = '0.1.0'.freeze
-  BATCH_SIZE = 10_000 # Размер батча в байтах
 
   def initialize
     @config = {
@@ -19,7 +18,8 @@ class Book2ru
       metadata_footer: true,
       rate_limits: nil,
       retry_attempts: 3,
-      start_batch: 1
+      start_batch: 1,
+      batch_size: 10_000
     }
 
     load_config
@@ -92,6 +92,10 @@ class Book2ru
         @config[:rate_limits] = rpm
       end
 
+      opts.on('-b', '--batch-size SIZE', Integer, 'Batch size in bytes') do |size|
+        @config[:batch_size] = size
+      end
+
       opts.separator ''
       opts.separator 'Examples:'
       opts.separator '  book2ru < input.txt > output-ru.txt'
@@ -151,7 +155,7 @@ class Book2ru
       line_size = line_with_newline.bytesize
 
       # Если добавление этой строки превысит лимит - завершаем текущий батч
-      if current_size + line_size > BATCH_SIZE && current_batch.any?
+      if current_size + line_size > @config[:batch_size] && current_batch.any?
         batches << {
           content: current_batch.join,
           size: current_size,

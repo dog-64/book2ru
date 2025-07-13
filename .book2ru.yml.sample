@@ -1,0 +1,29 @@
+# Конфигурация book2ru (Ruby версия)
+# Скопируйте этот файл как .book2ru.yml и настройте под свои нужды
+
+# Модель для перевода
+model: "google/gemini-flash-1.5"
+
+# Промпт для перевода
+prompt: "Translate this text to Russian. Only return the translated text, nothing else:"
+
+# Размер батча в байтах (по умолчанию 10KB)
+batch_size: 10000
+
+# Количество попыток при ошибках
+retry_attempts: 3
+
+# Показывать метаданные в STDERR
+metadata_footer: true
+
+# Ограничение скорости (запросов в минуту, null = без ограничений)
+rate_limits: null
+
+# Альтернативные модели для экспериментов:
+# model: "anthropic/claude-3-5-sonnet-20240620"
+# model: "mistralai/mistral-large-latest"
+# model: "openai/gpt-4o"
+
+# Альтернативные промпты:
+# prompt: "Translate the following English text to Russian. Preserve all formatting and line breaks:"
+# prompt: "Переведи этот текст на русский язык, сохраняя форматирование:" 

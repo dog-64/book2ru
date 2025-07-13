@@ -23,5 +23,6 @@ end
 
 group :development, :test do
   gem 'brakeman'
+  gem 'bundle-audit'
   gem 'rubocop'
 end

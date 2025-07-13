@@ -35,6 +35,7 @@ type Config struct {
 	MetadataFooter bool   `yaml:"metadata_footer"`
 	RetryAttempts  int    `yaml:"retry_attempts"`
 	StartBatch     int    `yaml:"start_batch"`
+	BatchSize      int    `yaml:"batch_size"`
 	APIKey         string
 }
 
@@ -105,6 +106,7 @@ func loadConfig() (*Config, error) {
 		MetadataFooter: true,
 		RetryAttempts:  3,
 		StartBatch:     1,
+		BatchSize:      10000,
 	}
 
 	// Load from .book2ru-go.yml if it exists
@@ -127,6 +129,7 @@ func loadConfig() (*Config, error) {
 	flag.StringVar(&cfg.APIKey, "openrouter_key", "", "OpenRouter API key")
 	flag.StringVar(&cfg.APIKey, "o", "", "OpenRouter API key (alias)")
 	flag.IntVar(&cfg.StartBatch, "start-batch", cfg.StartBatch, "Start translation from specific batch number")
+	flag.IntVar(&cfg.BatchSize, "batch-size", cfg.BatchSize, "Batch size in bytes")
 
 	flag.Parse()
 
@@ -165,9 +168,9 @@ func runTranslate(stdin io.Reader, stdout io.Writer, logger *log.Logger, cfg *Co
 		return fmt.Errorf("reading from stdin: %w", err)
 	}
 
-	batches := createBatchesFromContent(string(content))
+	batches := createBatchesFromContent(string(content), cfg.BatchSize)
 	if cfg.MetadataFooter {
-		logger.Printf("# Created %d batches from %d bytes", len(batches), len(content))
+		logger.Printf("# Created %d batches from %d bytes (batch size: %d)", len(batches), len(content), cfg.BatchSize)
 		if cfg.StartBatch > 1 {
 			logger.Printf("# Starting from batch %d", cfg.StartBatch)
 		}
@@ -184,12 +187,12 @@ func runTranslate(stdin io.Reader, stdout io.Writer, logger *log.Logger, cfg *Co
 		if cfg.MetadataFooter {
 			logger.Printf("# Processing batch %d/%d (%d bytes, %d lines)", i+1, len(batches), batch.Size, batch.Lines)
 		}
-		
+
 		translated, err := translateTextBatch(batch.Content, cfg, logger)
 		if err != nil {
-			return fmt.Errorf("translating batch %d: %w\n\nTo resume from this batch, use: --start-batch %d", i+1, err, i+1)
+			return fmt.Errorf("translating batch %d: %w\n\nTo resume from this batch, use: --start-batch %d --batch-size %d", i+1, err, i+1, cfg.BatchSize)
 		}
-		
+
 		if _, err := fmt.Fprint(stdout, translated); err != nil {
 			return fmt.Errorf("writing to stdout: %w", err)
 		}
@@ -202,19 +205,19 @@ func runTranslate(stdin io.Reader, stdout io.Writer, logger *log.Logger, cfg *Co
 	return nil
 }
 
-// createBatchesFromContent creates batches from content, splitting by 10KB
+// createBatchesFromContent creates batches from content, splitting by specified size
 // This exactly mirrors the Ruby logic
-func createBatchesFromContent(content string) []Batch {
+func createBatchesFromContent(content string, batchSizeBytes int) []Batch {
 	var batches []Batch
-	
+
 	// Handle empty content
 	if content == "" {
 		return batches
 	}
-	
+
 	// Split content into lines, preserving empty lines at the end like Ruby's split("\n", -1)
 	lines := strings.Split(content, "\n")
-	
+
 	var currentBatch []string
 	currentSize := 0
 
@@ -226,11 +229,11 @@ func createBatchesFromContent(content string) []Batch {
 		} else {
 			lineWithNewline = line + "\n"
 		}
-		
+
 		lineSize := len(lineWithNewline)
 
 		// If adding this line would exceed the limit AND we have content - finish current batch
-		if currentSize+lineSize > batchSize && len(currentBatch) > 0 {
+		if currentSize+lineSize > batchSizeBytes && len(currentBatch) > 0 {
 			batches = append(batches, Batch{
 				Content: strings.Join(currentBatch, ""),
 				Size:    currentSize,
@@ -258,7 +261,7 @@ func createBatchesFromContent(content string) []Batch {
 
 func translateTextBatch(text string, cfg *Config, logger *log.Logger) (string, error) {
 	var lastErr error
-	
+
 	for attempt := 0; attempt < cfg.RetryAttempts; attempt++ {
 		if attempt > 0 {
 			logger.Printf("# Retry attempt %d failed: %v", attempt, lastErr)
@@ -330,4 +333,4 @@ func translateTextBatch(text string, cfg *Config, logger *log.Logger) (string, e
 	}
 
 	return "", fmt.Errorf("failed after %d attempts: %w", cfg.RetryAttempts, lastErr)
-} 
+}
