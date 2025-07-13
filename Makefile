@@ -29,7 +29,7 @@ test:
 	bundle exec bundle-audit --update
 	make brakeman
 	trivy fs . --scanners vuln --skip-dirs ./vendor
-	go testg
+	go test
 
 rspec:
 	#bundle exec rspec
@@ -41,5 +41,5 @@ rubocop:
 	bundle exec  rubocop -A
 
 brakeman:
-	bundle exec brakeman -q -6 --no-summary
+	bundle exec brakeman -q -6 --no-summary --force
 
